@@ -16,22 +16,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Запуск приложения")
     await _run_parse_job()
-    global _scheduler
-    _scheduler = create_scheduler(_run_parse_job)
-    _scheduler.start()
+    scheduler = create_scheduler(_run_parse_job)
+    scheduler.start()
 
     yield
 
     logger.info("Остановка приложения")
-    if _scheduler:
-        _scheduler.shutdown(wait=False)
+    if scheduler:
+        scheduler.shutdown(wait=False)
 
 app = FastAPI(title="Selectel Vacancies API", lifespan=lifespan)
 app.include_router(api_router)
 
 setup_logging()
-
-_scheduler = None
 
 
 async def _run_parse_job() -> None:
