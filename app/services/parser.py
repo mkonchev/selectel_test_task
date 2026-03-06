@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.vacancy import upsert_external_vacancies
 from app.schemas.external import ExternalVacanciesResponse
+from app.db.session import async_session_maker
 
 logger = logging.getLogger(__name__)
 
@@ -61,3 +62,11 @@ async def parse_and_store(session: AsyncSession) -> int:
 
     logger.info("Парсинг завершен, новых вакансий: %s", created_total)
     return created_total
+
+
+async def run_parse_job() -> None:
+    try:
+        async with async_session_maker() as session:
+            await parse_and_store(session)
+    except Exception as exc:
+        logger.exception("Ошибка фонового парсинга: %s", exc)
