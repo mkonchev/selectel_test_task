@@ -1,16 +1,16 @@
-from typing import AsyncGenerator
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import async_session_maker
 from app.services.parser import parse_and_store
 from app.db.session import get_session
+from app.schemas import external as schemas
 
 router = APIRouter(prefix="/parse", tags=["parser"])
 
 
 @router.post("/")
-async def parse_endpoint(session: AsyncSession = Depends(get_session)) -> dict:
+async def parse_endpoint(
+    session: AsyncSession = Depends(get_session)
+) -> schemas.ExternalParseResponce:
     created_count = await parse_and_store(session)
-    return {"created": created_count}
+    return {"item_count": created_count}

@@ -37,3 +37,7 @@ class ExternalVacanciesResponse(BaseModel):
     items_per_page: int
     page: int
     page_count: int
+
+
+class ExternalParseResponce(BaseModel):
+    item_count: int
