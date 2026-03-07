@@ -5,7 +5,6 @@ from fastapi import FastAPI
 
 from app.api.v1.router import api_router
 from app.core.logging import setup_logging
-# from app.db.session import async_session_maker
 from app.services.parser import run_parse_job
 from app.services.scheduler import create_scheduler
 
