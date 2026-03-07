@@ -1,54 +1,71 @@
-from typing import List, Optional, AsyncGenerator
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.vacancy import (
-    create_vacancy,
-    delete_vacancy,
-    get_vacancy,
-    get_vacancy_by_external_id,
-    list_vacancies,
-    update_vacancy,
-)
+from app.services import vacancy as VacansyService
 from app.db.session import get_session
 from app.schemas.vacancy import VacancyCreate, VacancyRead, VacancyUpdate
 
 router = APIRouter(prefix="/vacancies", tags=["vacancies"])
 
 
-@router.get("/", response_model=List[VacancyRead])
+@router.get("/", response_model=list[VacancyRead])
 async def list_vacancies_endpoint(
-    timetable_mode_name: Optional[str] = None,
-    city: Optional[str] = None,
+    timetable_mode_name: str | None = None,
+    city: str | None = None,
     session: AsyncSession = Depends(get_session),
-) -> List[VacancyRead]:
-    return await list_vacancies(session, timetable_mode_name, city)
+) -> list[VacancyRead]:
+    try:
+        return await VacansyService.get_list_vacancy(
+            session,
+            timetable_mode_name,
+            city
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
 @router.get("/{vacancy_id}", response_model=VacancyRead)
 async def get_vacancy_endpoint(
     vacancy_id: int, session: AsyncSession = Depends(get_session)
 ) -> VacancyRead:
-    vacancy = await get_vacancy(session, vacancy_id)
-    if not vacancy:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return vacancy
+    try:
+        vacancy = await (
+            VacansyService.get_vacancy(session, vacancy_id)
+        )
+        return vacancy
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Not found vacansion with this id: {e}"
+        )
 
 
-@router.post("/", response_model=VacancyRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=VacancyRead,
+    status_code=status.HTTP_201_CREATED
+)
 async def create_vacancy_endpoint(
     payload: VacancyCreate, session: AsyncSession = Depends(get_session)
 ) -> VacancyRead:
-    if payload.external_id is not None:
-        existing = await get_vacancy_by_external_id(session, payload.external_id)
-        if existing:
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"detail": "Vacancy with external_id already exists"},
-            )
-    return await create_vacancy(session, payload)
+    try:
+        vacancy = await (
+            VacansyService.create_vacancy(session, payload)
+        )
+        return vacancy
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,  # изначально статус был 200_OK # noqa
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
 @router.put("/{vacancy_id}", response_model=VacancyRead)
@@ -57,17 +74,36 @@ async def update_vacancy_endpoint(
     payload: VacancyUpdate,
     session: AsyncSession = Depends(get_session),
 ) -> VacancyRead:
-    vacancy = await get_vacancy(session, vacancy_id)
-    if not vacancy:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return await update_vacancy(session, vacancy, payload)
+    try:
+        vacancy = await (
+            VacansyService.update_vacancy(session, vacancy_id, payload)
+        )
+        return vacancy
+    except ValueError as e:  # Опять же можно было содздать кастомное исключение exceptions.VacancyNotFoundError # noqa
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
 @router.delete("/{vacancy_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_vacancy_endpoint(
     vacancy_id: int, session: AsyncSession = Depends(get_session)
 ) -> None:
-    vacancy = await get_vacancy(session, vacancy_id)
-    if not vacancy:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    await delete_vacancy(session, vacancy)
+    try:
+        await VacansyService.delete_vacancy(session, vacancy_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
