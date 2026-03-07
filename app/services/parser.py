@@ -6,15 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.vacancy import upsert_external_vacancies
 from app.schemas.external import ExternalVacanciesResponse
 from app.db.session import async_session_maker
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
-
-API_URL = "https://api.selectel.ru/proxy/public/employee/api/public/vacancies"
 
 
 async def fetch_page(client: httpx.AsyncClient, page: int) -> ExternalVacanciesResponse:
     response = await client.get(
-        API_URL,
+        settings.api_url,
         params={"per_page": 1000, "page": page},
     )
     response.raise_for_status()

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     )
     log_level: str = "INFO"
     parse_schedule_minutes: int = 5
+    api_url: str = "API_URL"
 
 
 settings = Settings()
